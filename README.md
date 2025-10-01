@@ -1,6 +1,6 @@
-# SecDev Course Template
+# Idea Catalog API
 
-Стартовый шаблон для студенческого репозитория (HSE SecDev 2025).
+Проектное задание HSE SecDev 2025: каталог продуктовых идей с оценкой ценности.
 
 ## Быстрый старт
 ```bash
@@ -38,16 +38,24 @@ docker compose up --build
 ```
 
 ## Эндпойнты
-- `GET /health` → `{"status": "ok"}`
-- `POST /items?name=...` — демо-сущность
-- `GET /items/{id}`
+- `GET /health` — пинг сервиса
+- `POST /ideas` — создать идею
+- `GET /ideas` — список идей с фильтрами по тегу, статусу или минимальной оценке
+- `GET /ideas/{id}` — получить конкретную идею
+- `PATCH /ideas/{id}` — обновить описание, теги или статус
+- `POST /ideas/{id}/evaluations` — добавить оценку
+- `GET /ideas/{id}/evaluations` — посмотреть историю оценок
 
 ## Формат ошибок
 Все ошибки — JSON-обёртка:
 ```json
 {
-  "error": {"code": "not_found", "message": "item not found"}
+  "error": {"code": "idea_not_found", "message": "idea not found"}
 }
 ```
+
+Полезные документы:
+- `docs/branching.md` — схема веток под P02
+- `REVIEW_CHECKLIST.md` — что проверяем при ревью
 
 См. также: `SECURITY.md`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml`.

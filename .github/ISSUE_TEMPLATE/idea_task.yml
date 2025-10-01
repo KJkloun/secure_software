@@ -1,0 +1,32 @@
+name: Idea task
+description: Описание новой задачи для каталога идей
+labels: ["idea"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Короткое название
+      description: "Например: 'Добавить фильтр по тегу'"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Зачем это делаем
+      description: Опишите, какую продуктовую проблему закрывает задача.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Что должно быть реализовано
+      description: Список шагов или acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Как проверяем
+      description: Юнит-тесты, мануальное тестирование, метрики.
+    validations:
+      required: true
