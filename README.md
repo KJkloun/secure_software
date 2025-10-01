@@ -20,6 +20,9 @@ pytest -q
 pre-commit run --all-files
 ```
 
+- Локальный `pre-commit` не даст закоммитить прямо в `main`, поэтому работу
+  всегда начинаем с ветки `p02/...`.
+
 ## Тесты
 ```bash
 pytest -q
