@@ -28,8 +28,8 @@ jobs:
       - name: Guard · enforce branch naming
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [[ ! "${GITHUB_HEAD_REF}" =~ ^p02/ && ! "${GITHUB_HEAD_REF}" =~ ^p03[-/] ]]; then
-            echo "::error::Branch name must start with 'p02/' или 'p03-' (либо 'p03/').";
+          if [[ ! "${GITHUB_HEAD_REF}" =~ ^p02/ && ! "${GITHUB_HEAD_REF}" =~ ^p03[-/] && ! "${GITHUB_HEAD_REF}" =~ ^p04[-/] ]]; then
+            echo "::error::Branch name must start with 'p02/', 'p03-' (или 'p03/'), либо 'p04-' (или 'p04/').";
             exit 1;
           fi
 

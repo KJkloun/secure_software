@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, constr, validator
+from pydantic import BaseModel, Field, constr, field_validator
 
 app = FastAPI(title="Idea Catalog", version="0.2.0")
 
@@ -145,25 +145,37 @@ class IdeaCreate(BaseModel):
     description: constr(min_length=10, max_length=2000)
     tags: List[constr(min_length=1, max_length=30)] = Field(default_factory=list)
 
-    @validator("title")
+    @field_validator("title")
+    @classmethod
     def tidy_title(cls, value: str) -> str:
         cleaned = value.strip()
         if len(cleaned) < 3:
             raise ValueError("title must contain at least 3 characters")
         return cleaned
 
-    @validator("description")
+    @field_validator("description")
+    @classmethod
     def tidy_description(cls, value: str) -> str:
         cleaned = value.strip()
         if len(cleaned) < 10:
             raise ValueError("description must contain at least 10 characters")
         return cleaned
 
-    @validator("tags", each_item=True)
-    def tidy_tag(cls, value: str) -> str:
-        cleaned = value.strip().lower()
-        if not cleaned:
-            raise ValueError("tag cannot be blank")
+    @field_validator("tags", mode="before")
+    @classmethod
+    def tidy_tags(cls, value):
+        if value is None:
+            return []
+
+        if not isinstance(value, list):
+            raise ValueError("tags must be a list")
+
+        cleaned: List[str] = []
+        for raw in value:
+            tag = raw.strip().lower()
+            if not tag:
+                raise ValueError("tag cannot be blank")
+            cleaned.append(tag)
         return cleaned
 
 
@@ -173,24 +185,35 @@ class IdeaUpdate(BaseModel):
     status: Optional[str] = None
     tags: Optional[List[constr(min_length=1, max_length=30)]] = None
 
-    @validator("title")
-    def tidy_title(cls, value: str) -> str:
+    @field_validator("title")
+    @classmethod
+    def tidy_title(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
         cleaned = value.strip()
         if len(cleaned) < 3:
             raise ValueError("title must contain at least 3 characters")
         return cleaned
 
-    @validator("description")
-    def tidy_description(cls, value: str) -> str:
+    @field_validator("description")
+    @classmethod
+    def tidy_description(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
         cleaned = value.strip()
         if len(cleaned) < 10:
             raise ValueError("description must contain at least 10 characters")
         return cleaned
 
-    @validator("tags")
-    def tidy_tags(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+    @field_validator("tags", mode="before")
+    @classmethod
+    def tidy_tags(cls, value):
         if value is None:
             return None
+
+        if not isinstance(value, list):
+            raise ValueError("tags must be a list")
+
         cleaned: List[str] = []
         for raw in value:
             tag = raw.strip().lower()
@@ -199,7 +222,8 @@ class IdeaUpdate(BaseModel):
             cleaned.append(tag)
         return cleaned
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def tidy_status(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
@@ -215,7 +239,8 @@ class EvaluationCreate(BaseModel):
     confidence: int = Field(..., ge=1, le=10)
     comment: Optional[constr(max_length=500)] = None
 
-    @validator("comment")
+    @field_validator("comment")
+    @classmethod
     def tidy_comment(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
@@ -378,7 +403,7 @@ def get_idea(idea_id: int):
 @app.patch("/ideas/{idea_id}", response_model=IdeaResponse)
 def update_idea(idea_id: int, payload: IdeaUpdate):
     """Обновить описание, статус или теги существующей идеи."""
-    updates = payload.dict(exclude_unset=True)
+    updates = payload.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(code="validation_error", message="payload is empty", status=422)
 
