@@ -1,14 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, storage
-
-
-@pytest.fixture(autouse=True)
-def reset_storage():
-    storage.clear()
-    yield
-    storage.clear()
+from app.main import app
 
 
 def create_sample_idea(client, **override):
@@ -36,11 +29,14 @@ def test_create_and_get_idea():
         "impact": None,
         "votes": 0,
     }
+    assert created["attachments"] == []
 
     idea_id = created["id"]
     fetched = client.get(f"/ideas/{idea_id}")
     assert fetched.status_code == 200
-    assert fetched.json()["title"] == created["title"]
+    fetched_body = fetched.json()
+    assert fetched_body["title"] == created["title"]
+    assert fetched_body["attachments"] == []
 
 
 def test_list_ideas_with_filters():
@@ -72,6 +68,7 @@ def test_list_ideas_with_filters():
     assert tag_filtered.status_code == 200
     assert len(tag_filtered.json()) == 1
     assert tag_filtered.json()[0]["id"] == idea_high["id"]
+    assert tag_filtered.json()[0]["attachments"] == []
 
 
 def test_update_idea():

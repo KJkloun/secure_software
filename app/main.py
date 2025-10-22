@@ -5,47 +5,61 @@
 реальную базу, при этом схемы запросов/ответов менять не придётся.
 """
 
+import os
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, constr, field_validator
 
-app = FastAPI(title="Idea Catalog", version="0.2.0")
+from app.problem_details import ApiProblem
+from app.security import AttachmentStorage, AttachmentValidationError, RateLimiter
+
+app = FastAPI(title="Idea Catalog", version="0.3.0")
+
+_attachment_dir = os.getenv("IDEA_ATTACHMENT_DIR", str(Path("var/uploads")))
+attachment_storage = AttachmentStorage(_attachment_dir)
+rate_limiter = RateLimiter()
 
 
-class ApiError(Exception):
-    """Контролируемая ошибка домена.
-
-    Через неё мы отправляем пользователю понятные ответы, не полагаясь на
-    внутренние тексты исключений.
-    """
-
-    def __init__(self, code: str, message: str, status: int = 400) -> None:
-        self.code = code
-        self.message = message
-        self.status = status
+@app.exception_handler(ApiProblem)
+async def api_problem_handler(request: Request, exc: ApiProblem):
+    return exc.as_response(request)
 
 
-@app.exception_handler(ApiError)
-async def api_error_handler(request: Request, exc: ApiError):
-    """Форматируем доменные ошибки в единый JSON-ответ."""
-    return JSONResponse(
-        status_code=exc.status,
-        content={"error": {"code": exc.code, "message": exc.message}},
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for item in exc.errors():
+        errors.append(
+            {
+                "loc": item.get("loc"),
+                "msg": item.get("msg"),
+                "type": item.get("type"),
+            }
+        )
+    problem = ApiProblem(
+        code="validation_error",
+        detail="request validation failed",
+        status=422,
+        extras={"errors": errors},
     )
+    return problem.as_response(request)
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Нормализуем исключения FastAPI, чтобы клиент всегда видел нашу обёртку."""
-    detail = exc.detail if isinstance(exc.detail, str) else "http_error"
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": "http_error", "message": detail}},
+    detail = exc.detail if isinstance(exc.detail, str) else "http error"
+    problem = ApiProblem(
+        code="http_error",
+        detail=str(detail),
+        status=exc.status_code,
+        title="HTTP error",
     )
+    return problem.as_response(request)
 
 
 @app.get("/health")
@@ -79,6 +93,7 @@ class IdeaRecord:
     tags: List[str]
     status: IdeaStatus = IdeaStatus.draft
     evaluations: List[Evaluation] = field(default_factory=list)
+    attachments: List[str] = field(default_factory=list)
 
 
 class ScoreSummary(BaseModel):
@@ -125,6 +140,7 @@ class IdeaResponse(BaseModel):
     tags: List[str]
     status: IdeaStatus
     score: ScoreSummary
+    attachments: List[str]
 
     @classmethod
     def from_record(cls, record: IdeaRecord) -> "IdeaResponse":
@@ -137,6 +153,7 @@ class IdeaResponse(BaseModel):
             tags=record.tags,
             status=record.status,
             score=score,
+            attachments=list(record.attachments),
         )
 
 
@@ -309,8 +326,10 @@ class IdeaStorage:
             try:
                 record.status = IdeaStatus(payload.status)
             except ValueError:
-                raise ApiError(
-                    code="invalid_status", message="unsupported status", status=422
+                raise ApiProblem(
+                    code="invalid_status",
+                    detail="unsupported status",
+                    status=422,
                 )
         if payload.tags is not None:
             record.tags = sorted({tag for tag in payload.tags})
@@ -349,10 +368,15 @@ class IdeaStorage:
         self._ideas.clear()
         self._next_id = 1
 
+    def add_attachment(self, idea_id: int, attachment: str) -> List[str]:
+        record = self._get_or_raise(idea_id)
+        record.attachments.append(attachment)
+        return list(record.attachments)
+
     def _get_or_raise(self, idea_id: int) -> IdeaRecord:
         """Утилита, чтобы не дублировать проверку на существование."""
         if idea_id not in self._ideas:
-            raise ApiError(code="idea_not_found", message="idea not found", status=404)
+            raise ApiProblem(code="idea_not_found", detail="idea not found", status=404)
         return self._ideas[idea_id]
 
 
@@ -360,12 +384,29 @@ storage = IdeaStorage()
 
 
 @app.post("/ideas", response_model=IdeaResponse, status_code=201)
-def create_idea(payload: IdeaCreate):
+def create_idea(request: Request, payload: IdeaCreate):
     """Создать новую идею о продукте."""
+    client_id = request.headers.get("X-Client-Id")
+    if not client_id and request.client:
+        client_id = request.client.host
+    client_id = client_id or "anonymous"
+    limit = rate_limiter.resolve_limit()
+    if not rate_limiter.allow(client_id, limit=limit):
+        raise ApiProblem(
+            code="too_many_requests",
+            detail="per-minute rate limit exceeded for idea creation",
+            status=429,
+            title="Too Many Requests",
+            extras={"limit_per_minute": limit},
+        )
     try:
         return storage.create(payload)
     except ValueError as exc:
-        raise ApiError(code="validation_error", message=str(exc), status=422)
+        raise ApiProblem(
+            code="validation_error",
+            detail=str(exc),
+            status=422,
+        )
 
 
 @app.get("/ideas", response_model=List[IdeaResponse])
@@ -387,8 +428,10 @@ def list_ideas(
         try:
             status_filter = IdeaStatus(status)
         except ValueError:
-            raise ApiError(
-                code="invalid_status", message="unsupported status", status=422
+            raise ApiProblem(
+                code="invalid_status",
+                detail="unsupported status",
+                status=422,
             )
 
     return storage.list(tag=tag, status=status_filter, min_score=min_score)
@@ -405,12 +448,13 @@ def update_idea(idea_id: int, payload: IdeaUpdate):
     """Обновить описание, статус или теги существующей идеи."""
     updates = payload.model_dump(exclude_unset=True)
     if not updates:
-        raise ApiError(code="validation_error", message="payload is empty", status=422)
+        raise ApiProblem(
+            code="validation_error",
+            detail="payload is empty",
+            status=422,
+        )
 
-    try:
-        return storage.update(idea_id, payload)
-    except ValueError as exc:
-        raise ApiError(code="validation_error", message=str(exc), status=422)
+    return storage.update(idea_id, payload)
 
 
 @app.post("/ideas/{idea_id}/evaluations", response_model=IdeaResponse)
@@ -423,3 +467,28 @@ def evaluate_idea(idea_id: int, payload: EvaluationCreate):
 def list_evaluations(idea_id: int):
     """Посмотреть все оценки, которые команда оставила по идее."""
     return storage.evaluations(idea_id)
+
+
+@app.post("/ideas/{idea_id}/attachments", status_code=201)
+async def upload_attachment(idea_id: int, file: UploadFile = File(...)):
+    """Безопасно сохранить вложение, проверяя сигнатуру и размер."""
+    data = await file.read()
+    try:
+        stored = attachment_storage.save(data)
+    except AttachmentValidationError as error:
+        status_map = {
+            "attachment_bad_type": 415,
+            "attachment_too_large": 413,
+        }
+        raise ApiProblem(
+            code=error.code,
+            detail=error.detail,
+            status=status_map.get(error.code, 400),
+        )
+
+    attachments = storage.add_attachment(idea_id, stored.filename)
+    return {
+        "attachment_id": stored.filename,
+        "content_type": stored.content_type,
+        "attachments": attachments,
+    }
