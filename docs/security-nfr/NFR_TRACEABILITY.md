@@ -9,14 +9,14 @@
 
 | NFR ID | Story/Task | Issue/Milestone | Приоритет | Release/Milestone |
 |--------|------------|-----------------|-----------|-------------------|
-| NFR-01 | SEC-12 — Включить JWT-защиту административных эндпойнтов | Backlog issue `SEC-12` (Security Hardening Sprint 1) | High | Sprint S1 (2025-02) |
-| NFR-02 | API-34 — Перевести все POST/PATCH на строгие схемы валидации | Issue `API-34` в Kanban «API Quality» | High | Sprint S1 (2025-02) |
-| NFR-03 | GATE-07 — Настроить rate limiting в API Gateway | Milestone «Security Gate v1» | Medium | Sprint S2 (2025-03) |
-| NFR-04 | EVAL-20 — Предотвратить повторные оценки пользователя | Issue `EVAL-20` в backlog продукта | Medium | Sprint S2 (2025-03) |
-| NFR-05 | OBS-11 — Настроить audit logging 401/403 в ELK | Milestone «Observability Maturity 1.0» | Medium | Sprint S3 (2025-04) |
-| NFR-06 | OPS-08 — Добавить weekly pip-audit в CI | Issue `OPS-08` в репозитории devops | High | Sprint S1 (2025-02) |
-| NFR-07 | OPS-14 — Автоматизировать ротацию секретов через Vault | Milestone «Platform Hardening Q2» | Medium | Sprint S3 (2025-04) |
-| NFR-08 | OPS-16 — Шифрование бэкапов AES-256 | Issue `OPS-16` в runbook проекта | Low | Sprint S4 (2025-05) |
+| NFR-01 | [SEC-12 — Включить JWT-защиту административных эндпойнтов](issues/SEC-12.md) | Backlog issue `SEC-12` (Security Hardening Sprint 1) | High | Sprint S1 (2025-02) |
+| NFR-02 | [API-34 — Перевести все POST/PATCH на строгие схемы валидации](issues/API-34.md) | Issue `API-34` в Kanban «API Quality» | High | Sprint S1 (2025-02) |
+| NFR-03 | [GATE-07 — Настроить rate limiting в API Gateway](issues/GATE-07.md) | Milestone «Security Gate v1» | Medium | Sprint S2 (2025-03) |
+| NFR-04 | [EVAL-20 — Предотвратить повторные оценки пользователя](issues/EVAL-20.md) | Issue `EVAL-20` в backlog продукта | Medium | Sprint S2 (2025-03) |
+| NFR-05 | [OBS-11 — Настроить audit logging 401/403 в ELK](issues/OBS-11.md) | Milestone «Observability Maturity 1.0» | Medium | Sprint S3 (2025-04) |
+| NFR-06 | [OPS-08 — Добавить weekly pip-audit в CI](issues/OPS-08.md) | Issue `OPS-08` в репозитории devops | High | Sprint S1 (2025-02) |
+| NFR-07 | [OPS-14 — Автоматизировать ротацию секретов через Vault](issues/OPS-14.md) | Milestone «Platform Hardening Q2» | Medium | Sprint S3 (2025-04) |
+| NFR-08 | [OPS-16 — Шифрование бэкапов AES-256](issues/OPS-16.md) | Issue `OPS-16` в runbook проекта | Low | Sprint S4 (2025-05) |
 
 ## Что стоит помнить
-Если появятся новые security-инициативы, стоит сразу зарезервировать релизное окно и внести ссылку в таблицу. Иногда кажется, что это очевидно, но из практики: как только пропустили срок, пришлось догонять два параллельных стрима. Поэтому я оставил явные указания на backlog и milestone для каждой записи.*** End Patch
+Если появятся новые security-инициативы, стоит сразу зарезервировать релизное окно и внести ссылку в таблицу. Иногда кажется, что это очевидно, но из практики: как только пропустили срок, пришлось догонять два параллельных стрима. Поэтому я оставил явные указания на backlog и milestone для каждой записи.
