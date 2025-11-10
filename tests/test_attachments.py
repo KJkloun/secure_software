@@ -4,7 +4,8 @@ from typing import Any, Dict
 
 from fastapi.testclient import TestClient
 
-from app.main import app, attachment_storage
+from app.main import app, attachment_storage, storage
+from app.problem_details import ApiProblem
 from app.security import MAX_ATTACHMENT_BYTES
 
 client = TestClient(app)
@@ -95,3 +96,40 @@ def test_rejects_unknown_signature():
         files={"file": ("payload.png", bad_data, "application/octet-stream")},
     )
     expect_problem(resp, status=415, code="attachment_bad_type")
+
+
+def test_rejects_missing_idea_without_writing_file():
+    data = make_png(b"\x00" * 16)
+
+    resp = client.post(
+        "/ideas/999/attachments",
+        files={"file": ("diagram.png", data, "image/png")},
+    )
+    expect_problem(resp, status=404, code="idea_not_found")
+    assert list(attachment_storage.base_dir.iterdir()) == []
+
+
+def test_cleanup_happens_when_storage_add_fails(monkeypatch):
+    create = client.post(
+        "/ideas",
+        json={
+            "title": "Cleanup idea",
+            "description": "Need to ensure files are removed on failure.",
+            "tags": ["files"],
+        },
+    )
+    assert create.status_code == 201
+    idea = create.json()
+
+    def fail_add_attachment(*_args, **_kwargs):
+        raise ApiProblem(code="storage_error", detail="cannot persist", status=503)
+
+    monkeypatch.setattr(storage, "add_attachment", fail_add_attachment)
+
+    data = make_png(b"\x00" * 32)
+    resp = client.post(
+        f"/ideas/{idea['id']}/attachments",
+        files={"file": ("diagram.png", data, "image/png")},
+    )
+    expect_problem(resp, status=503, code="storage_error")
+    assert list(attachment_storage.base_dir.iterdir()) == []

@@ -314,6 +314,10 @@ class IdeaStorage:
         record = self._get_or_raise(idea_id)
         return IdeaResponse.from_record(record)
 
+    def ensure_exists(self, idea_id: int) -> None:
+        """Проверяет, что идея существует (без аллокаций ответа)."""
+        self._get_or_raise(idea_id)
+
     def update(self, idea_id: int, payload: IdeaUpdate) -> IdeaResponse:
         """Обновляет только те поля, которые передал клиент."""
         record = self._get_or_raise(idea_id)
@@ -472,6 +476,7 @@ def list_evaluations(idea_id: int):
 @app.post("/ideas/{idea_id}/attachments", status_code=201)
 async def upload_attachment(idea_id: int, file: UploadFile = File(...)):
     """Безопасно сохранить вложение, проверяя сигнатуру и размер."""
+    storage.ensure_exists(idea_id)
     data = await file.read()
     try:
         stored = attachment_storage.save(data)
@@ -486,7 +491,11 @@ async def upload_attachment(idea_id: int, file: UploadFile = File(...)):
             status=status_map.get(error.code, 400),
         )
 
-    attachments = storage.add_attachment(idea_id, stored.filename)
+    try:
+        attachments = storage.add_attachment(idea_id, stored.filename)
+    except ApiProblem:
+        attachment_storage.delete(stored.filename)
+        raise
     return {
         "attachment_id": stored.filename,
         "content_type": stored.content_type,

@@ -80,6 +80,22 @@ class AttachmentStorage:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
+    def delete(self, filename: str) -> None:
+        """Удаляет вложение, если оно лежит внутри базовой директории."""
+        try:
+            path = (self._base_dir / filename).resolve()
+        except (OSError, RuntimeError):
+            return
+
+        if not str(path).startswith(str(self._base_dir)):
+            return
+
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            # При гонке с параллельным удалением ничего делать не нужно.
+            return
+
     def save(self, data: bytes) -> AttachmentResult:
         if len(data) > MAX_ATTACHMENT_BYTES:
             raise AttachmentValidationError(
