@@ -22,14 +22,14 @@ jobs:
               !startsWith(github.event.head_commit.message, 'Merge pull request') &&
               !contains(github.event.head_commit.message, '(#') }}
         run: |
-          echo "::error::Direct pushes to main are not allowed. Please merge via PR (squash/merge)."
+          echo "::error::Direct pushes to main are not allowed. Please open a PR."
           exit 1
 
       - name: Guard · enforce branch naming
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [[ ! "${GITHUB_HEAD_REF}" =~ ^p02/ && ! "${GITHUB_HEAD_REF}" =~ ^p03[-/] && ! "${GITHUB_HEAD_REF}" =~ ^p04[-/] && ! "${GITHUB_HEAD_REF}" =~ ^p05[-/] ]]; then
-            echo "::error::Branch name must start with 'p02/', 'p03-' (или 'p03/'), 'p04-' (или 'p04/'), либо 'p05-' (или 'p05/').";
+          if [[ ! "${GITHUB_HEAD_REF}" =~ ^p0(2|3|4|5|6|7|8)[-/] ]]; then
+            echo "::error::Branch name must start with 'p02/', 'p03-', 'p04-', 'p05-', 'p06-', 'p07-' или 'p08-'.";
             exit 1;
           fi
 
