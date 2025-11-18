@@ -34,20 +34,10 @@ Badge добавится автоматически после загрузки 
 
 ## Контейнеры
 ```bash
-cp .env.example .env   # задаёт IDEA_API_PORT, IDEA_ATTACHMENT_DIR и лимиты
+docker build -t secdev-app .
+docker run --rm -p 8000:8000 secdev-app
+# или
 docker compose up --build
-# скрипт проверяет здоровье контейнера и uid процесса
-scripts/test_container.sh
-```
-
-Dockerfile использует multi-stage сборку на базе `python:3.11.9-slim-bookworm`
-с зафиксированным digest, non-root пользователем и `HEALTHCHECK`. Для
-дополнительных проверок:
-
-```bash
-hadolint Dockerfile
-docker compose build           # соберёт образ idea-catalog:local
-trivy image idea-catalog:local
 ```
 
 ## Эндпойнты
