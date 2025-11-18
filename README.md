@@ -1,5 +1,4 @@
 # Idea Catalog API
-[![CI](https://github.com/KJkloun/secure_software/actions/workflows/ci.yml/badge.svg)](https://github.com/KJkloun/secure_software/actions/workflows/ci.yml)
 
 Проектное задание HSE SecDev 2025: каталог продуктовых идей с оценкой ценности.
 
@@ -26,16 +25,12 @@ pre-commit run --all-files
 
 ## Тесты
 ```bash
-mkdir -p reports
-pytest -q --junitxml=reports/junit.xml
+pytest -q
 ```
 
 ## CI
-Workflow `.github/workflows/ci.yml` (GitHub Actions) гоняет линтеры (`ruff`,
-`black --check`, `isort --check-only`) и `pytest -q --junitxml=reports/junit.xml`
-под Python 3.12 для событий `push/pull_request`. Pip кэшируется, у шагов задан
-таймаут, а `reports/` загружается артефактом, чтобы можно было смотреть
-результаты тестов в UI.
+В репозитории настроен workflow **CI** (GitHub Actions) — required check для `main`.
+Badge добавится автоматически после загрузки шаблона в GitHub.
 
 ## Контейнеры
 ```bash

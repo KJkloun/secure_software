@@ -9,8 +9,6 @@ build/
 .env
 .pytest_cache/
 .coverage
-coverage.xml
-reports/
 # IDE
 .vscode/
 .idea/
