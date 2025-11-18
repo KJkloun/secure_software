@@ -1,19 +1,27 @@
 name: CI
+
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - "**"
+  pull_request:
+
 permissions:
   contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  quality:
+    name: Lint & tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 2
 
       - name: Guard · forbid direct pushes to main
         if: >-
@@ -33,24 +41,49 @@ jobs:
             exit 1;
           fi
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        timeout-minutes: 3
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+        timeout-minutes: 5
 
-      - name: Lint & Format
+      - name: Prepare reports directory
         run: |
-          ruff check . --output-format=github
-          black --check .
-          isort --check-only .
+          rm -rf reports
+          mkdir -p reports
+        timeout-minutes: 1
 
-      - name: Tests
-        run: pytest -q
+      - name: Ruff
+        run: ruff check . --output-format=github
+        timeout-minutes: 5
 
-      - name: Pre-commit (all files)
-        run: pre-commit run --all-files
+      - name: Black
+        run: black --check .
+        timeout-minutes: 5
+
+      - name: Isort
+        run: isort --check-only .
+        timeout-minutes: 5
+
+      - name: Pytest
+        run: pytest -q --junitxml=reports/junit.xml
+        timeout-minutes: 10
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-reports
+          path: reports
+          if-no-files-found: ignore
+          retention-days: 7
