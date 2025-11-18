@@ -1,49 +1,17 @@
-# VCS and metadata
 .git
-.gitmodules
-.gitattributes
 .gitignore
-
-# Python artifacts
+.gitattributes
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
-*.so
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.hypothesis/
-*.egg-info/
-build/
-dist/
-
-# Virtual environments
+*.sqlite
+*.db
 .venv/
-.venv*/
-
-# Tooling caches and reports
+dist/
+build/
+.pytest_cache/
 .coverage
-coverage.xml
-reports/
-
-# Editor/OS junk
-.DS_Store
-Thumbs.db
-*.swp
-.idea/
-.vscode/
-
-# Environment files
+htmlcov/
+node_modules/
 .env
-.env.*
-!.env.example
-
-# Local data and artifacts
-var/uploads/*
-!var/uploads/.gitkeep
-
-# Container/compose extras
-docker-compose.override.yml
-compose.yaml
-Dockerfile.dev
