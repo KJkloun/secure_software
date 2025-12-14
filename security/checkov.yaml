@@ -1,0 +1,6 @@
+soft-fail: true
+download-external-modules: true
+skip-path:
+  - EVIDENCE
+framework:
+  - kubernetes

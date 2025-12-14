@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idea-catalog
+  labels:
+    app: idea-catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: idea-catalog
+  template:
+    metadata:
+      labels:
+        app: idea-catalog
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: app
+          image: idea-catalog:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: IDEA_API_PORT
+              value: "8000"
+            - name: IDEA_ATTACHMENT_DIR
+              value: /app/var/uploads
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/var/uploads
+      volumes:
+        - name: uploads
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: idea-catalog
+  labels:
+    app: idea-catalog
+spec:
+  type: ClusterIP
+  selector:
+    app: idea-catalog
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000

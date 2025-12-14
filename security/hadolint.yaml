@@ -1,0 +1,3 @@
+ignored:
+  - DL3008  # apt-get install без пинования версий пакетов в runtime-слое
+failure-threshold: warning

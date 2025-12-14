@@ -1,0 +1,9 @@
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+vuln-type:
+  - os
+  - library
+ignore-unfixed: true
+exit-code: 0
